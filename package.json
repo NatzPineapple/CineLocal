@@ -2,11 +2,10 @@
   "name": "cine-local",
   "version": "1.1.0",
   "description": "Catálogo e player de filmes locais, com compressão e download do Telegram",
-  "main": "main.js",
+  "main": "public/js/main.js",
   "scripts": {
     "start": "electron .",
-    "web": "node server.js",
-    "icon": "electron scripts/make-icon.js",
+    "web": "node public/js/server.js",
     "dist": "electron-builder --win"
   },
   "keywords": [],
@@ -40,7 +39,6 @@
       "!telegram.session",
       "!window.json",
       "!dist/**",
-      "!scripts/**",
       "!iniciar.bat",
       "!README.md",
       "!**/*.part",

@@ -8,7 +8,10 @@ Na primeira vez, clique em **📁 Pasta** e escolha onde estão seus filmes (sub
 No app instalado, configurações, cache e login do Telegram ficam em `%APPDATA%\Cine Local`.
 
 **Desenvolvimento:** `iniciar.bat` ou `npm start` abre o app direto do código. `npm run web` roda a versão no navegador (http://localhost:8765).
-**Gerar o instalador de novo:** `npm run dist`. O ícone é gerado por `npm run icon` (build/icon.png).
+**Gerar o instalador de novo:** `npm run dist`. O ícone do app fica em `build/icon.png`.
+
+**Estrutura:** `public/index.html` é a interface; `public/js/` tem o processo do Electron (`main.js`, `preload.js`),
+o servidor local (`server.js`) e a integração com o Telegram (`telegram.js`).
 
 ## Recursos
 - **Catálogo**: miniatura, título/ano extraídos do nome do arquivo, duração, resolução, codecs, tamanho, busca e ordenação.

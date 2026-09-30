@@ -8,7 +8,7 @@ const path = require('path');
 const { spawn, execFileSync } = require('child_process');
 
 const PORT = Number(process.env.PORT) || 8765;
-const ROOT = __dirname;
+const ROOT = path.join(__dirname, '..', '..'); // raiz do projeto (este arquivo fica em public/js)
 // No app instalado a pasta do programa é somente leitura; config, cache e sessão ficam em CINE_DATA_DIR.
 const DATA_DIR = process.env.CINE_DATA_DIR || ROOT;
 const CONFIG_FILE = path.join(DATA_DIR, 'config.json');

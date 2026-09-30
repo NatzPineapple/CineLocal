@@ -7,14 +7,16 @@ const fs = require('fs');
 
 if (!app.requestSingleInstanceLock()) app.quit();
 
+const ROOT = path.join(__dirname, '..', '..'); // raiz do projeto (este arquivo fica em public/js)
+
 // Instalado: dados em %APPDATA%\Cine Local. Em desenvolvimento: na pasta do projeto.
-const DATA_DIR = app.isPackaged ? app.getPath('userData') : __dirname;
+const DATA_DIR = app.isPackaged ? app.getPath('userData') : ROOT;
 process.env.CINE_DATA_DIR = DATA_DIR;
-process.env.CINE_DEFAULT_MOVIES = app.isPackaged ? path.join(app.getPath('videos'), 'Cine Local') : path.join(__dirname, 'filmes');
+process.env.CINE_DEFAULT_MOVIES = app.isPackaged ? path.join(app.getPath('videos'), 'Cine Local') : path.join(ROOT, 'filmes');
 
 const BOUNDS_FILE = path.join(DATA_DIR, 'window.json');
 const MINI_FILE = path.join(DATA_DIR, 'mini.json');
-const ICON = path.join(__dirname, 'build', 'icon.png');
+const ICON = path.join(ROOT, 'build', 'icon.png');
 let win = null;
 let miniWin = null;
 let server = null;
