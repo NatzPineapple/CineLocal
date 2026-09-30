@@ -1,0 +1,855 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cine Local</title>
+<style>
+  :root {
+    --bg: #0e0f13; --panel: #171920; --panel-2: #1f222b; --line: #2a2e39;
+    --text: #e9eaee; --muted: #9398a6; --accent: #f5b83d; --accent-ink: #1a1405;
+    --ok: #4cc38a; --warn: #ef6b5b; --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, "Segoe UI", sans-serif; }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+
+  header { position: sticky; top: 0; z-index: 5; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    padding: 14px 24px; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+  .brand { font-weight: 700; font-size: 19px; letter-spacing: .2px; margin-right: auto; display: flex; align-items: center; gap: 8px; }
+  .brand span { color: var(--accent); }
+  .search { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; width: min(320px, 100%); }
+  .select, .btn { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+  .btn:hover { background: var(--panel-2); }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.ghost { background: transparent; }
+
+  .stats { display: flex; gap: 28px; flex-wrap: wrap; padding: 18px 24px 4px; color: var(--muted); font-size: 14px; }
+  .stats b { color: var(--text); font-size: 17px; display: block; }
+
+  main { padding: 16px 24px 48px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 20px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column; }
+  .poster { position: relative; aspect-ratio: 16/9; background: #000 center/cover no-repeat; cursor: pointer; }
+  .poster::after { content: "▶"; position: absolute; inset: 0; display: grid; place-items: center; font-size: 34px;
+    background: rgba(0,0,0,.45); opacity: 0; transition: opacity .15s; }
+  .poster:hover::after { opacity: 1; }
+  .poster .dur { position: absolute; right: 8px; bottom: 8px; background: rgba(0,0,0,.75); padding: 1px 7px; border-radius: 5px; font-size: 12px; }
+  .poster .resume { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--accent); }
+  .info { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .title { font-weight: 600; line-height: 1.25; }
+  .title small { color: var(--muted); font-weight: 400; }
+  .tags { display: flex; gap: 5px; flex-wrap: wrap; }
+  .tag { font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); }
+  .tag.hi { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+  .tag.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; }
+  .size { color: var(--muted); font-size: 13px; }
+  .size .save { color: var(--ok); }
+  .mini { padding: 4px 10px; font-size: 13px; border-radius: 6px; background: var(--panel-2); border: 1px solid var(--line); }
+  .mini:hover { border-color: var(--muted); }
+  .progress { height: 6px; background: var(--panel-2); border-radius: 3px; overflow: hidden; }
+  .progress i { display: block; height: 100%; background: var(--accent); transition: width .5s; }
+  .jobline { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; gap: 6px; }
+  .jobline.err { color: var(--warn); }
+  .jobline a { color: var(--muted); }
+  .jobline a:hover { color: var(--text); }
+  .empty { text-align: center; color: var(--muted); padding: 80px 20px; }
+  .empty code { background: var(--panel); padding: 2px 6px; border-radius: 4px; }
+
+  /* Diálogos */
+  dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 12px; padding: 22px; width: min(520px, 94vw); }
+  dialog::backdrop { background: rgba(0,0,0,.6); }
+  dialog h3 { margin: 0 0 8px; }
+  dialog p { color: var(--muted); margin: 6px 0 14px; font-size: 14px; }
+  .opts { display: grid; gap: 8px; margin: 12px 0 18px; }
+  .opts label { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+  .opts label:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+  .opts small { display: block; color: var(--muted); }
+  .actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+  /* Player */
+  #player { position: fixed; inset: 0; background: #000; z-index: 20; display: none; flex-direction: column; }
+  #player.open { display: flex; }
+  #player video { flex: 1; width: 100%; min-height: 0; background: #000; }
+  .pbar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 10px 18px; background: #0b0c10; border-top: 1px solid #1d2028; }
+  .pbar .ptitle { font-weight: 600; margin-right: auto; }
+  .boost { display: flex; align-items: center; gap: 10px; }
+  .boost input[type=range] { width: 220px; accent-color: var(--accent); }
+  .boost output { min-width: 92px; font-variant-numeric: tabular-nums; }
+  .boost output.loud { color: var(--accent); }
+  .chip { padding: 4px 10px; border-radius: 999px; border: 1px solid #2c303b; background: transparent; font-size: 13px; }
+  .chip.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .meter { width: 70px; height: 6px; background: #1d2028; border-radius: 3px; overflow: hidden; }
+  .meter i { display: block; height: 100%; width: 0; background: var(--ok); }
+  .perr { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); background: var(--panel); border: 1px solid var(--line);
+    padding: 18px 22px; border-radius: 10px; max-width: 460px; text-align: center; display: none; }
+  .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--panel-2); border: 1px solid var(--line);
+    padding: 10px 16px; border-radius: 8px; z-index: 30; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  /* Mini player: a mesma página, aberta numa janela flutuante sem bordas */
+  .mini-ui { display: none; }
+  body.mini { overflow: hidden; background: #000; }
+  body.mini > :not(#player):not(.toast) { display: none !important; }
+  body.mini #player { display: flex; }
+  body.mini #player .pbar { display: none; }
+  body.mini .mini-ui { display: flex; flex-direction: column; justify-content: space-between; position: absolute; inset: 0;
+    opacity: 0; transition: opacity .2s; background: linear-gradient(rgba(0,0,0,.65), transparent 34%, transparent 58%, rgba(0,0,0,.8)); }
+  body.mini .mini-ui:hover, body.mini.paused .mini-ui { opacity: 1; }
+  body.mini .toast { bottom: 64px; font-size: 13px; }
+  .mini-ui button { background: none; border: 0; color: #fff; font-size: 16px; padding: 4px 8px; border-radius: 6px; -webkit-app-region: no-drag; }
+  .mini-ui button:hover { background: rgba(255,255,255,.15); }
+  .mini-ui button.on { color: var(--accent); }
+  .mini-top { display: flex; align-items: center; gap: 2px; padding: 4px 4px 4px 12px; -webkit-app-region: drag; cursor: move; }
+  .mini-title { flex: 1; font-size: 13px; font-weight: 600; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-shadow: 0 1px 2px #000; }
+  .mini-center { flex: 1; display: flex; justify-content: center; align-items: center; gap: 18px; }
+  .mini-center button { font-size: 22px; }
+  .mini-center button.big { font-size: 26px; width: 54px; height: 54px; border-radius: 50%; background: rgba(0,0,0,.45); }
+  .mini-bottom { padding: 0 10px 6px; }
+  .mini-bottom input[type=range], .mini-vol input { accent-color: var(--accent); }
+  #miniSeek { width: 100%; margin: 0; -webkit-app-region: no-drag; }
+  .mini-row { display: flex; align-items: center; gap: 8px; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .mini-row #miniTime { margin-right: auto; }
+  .mini-vol { display: flex; align-items: center; gap: 4px; -webkit-app-region: no-drag; }
+  .mini-vol input { width: 80px; }
+  .mini-vol output { min-width: 36px; }
+  .mini-vol output.loud { color: var(--accent); }
+  @media (max-width: 380px) { .mini-vol input { width: 50px; } .mini-center { gap: 8px; } }
+
+  /* Telegram */
+  .badge { background: var(--accent); color: var(--accent-ink); border-radius: 999px; padding: 0 7px; font-size: 12px; font-weight: 700; margin-left: 4px; }
+  #tg { position: fixed; inset: 0; z-index: 15; background: var(--bg); display: none; flex-direction: column; }
+  #tg.open { display: flex; }
+  .tghead { display: flex; align-items: center; gap: 12px; padding: 14px 24px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .tghead h2 { margin: 0 auto 0 0; font-size: 19px; }
+  .tgbody { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .setup { max-width: 560px; margin: 40px auto; padding: 0 16px; display: grid; gap: 14px; }
+  .setup ol { color: var(--muted); padding-left: 20px; margin: 0; }
+  .setup ol li { margin: 4px 0; }
+  .setup a { color: var(--accent); }
+  .field { display: grid; gap: 4px; }
+  .field span { font-size: 13px; color: var(--muted); }
+  .field input { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .note { font-size: 13px; color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .err { color: var(--warn); font-size: 14px; }
+  .links { display: flex; gap: 8px; padding: 12px 24px; border-bottom: 1px solid var(--line); }
+  .links textarea { flex: 1; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; resize: vertical; min-height: 40px; height: 40px; font: inherit; color: inherit; }
+  .browse { flex: 1; min-height: 0; display: grid; grid-template-columns: 280px 1fr; }
+  .chats { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+  .chats input, .vidsearch { margin: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+  .chatlist { overflow: auto; flex: 1; }
+  .chat { display: flex; gap: 8px; align-items: center; width: 100%; text-align: left; background: none; border: 0; padding: 9px 14px; border-left: 3px solid transparent; }
+  .chat:hover { background: var(--panel); }
+  .chat.sel { background: var(--panel); border-left-color: var(--accent); }
+  .chat .t { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chat small { color: var(--muted); font-size: 11px; }
+  .vids { overflow: auto; min-height: 0; padding: 0 12px 20px; }
+  .vgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
+  .vcard { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column; }
+  .vthumb { aspect-ratio: 16/9; background: #000 center/cover no-repeat; position: relative; }
+  .vthumb .dur { position: absolute; right: 6px; bottom: 6px; background: rgba(0,0,0,.75); padding: 0 6px; border-radius: 4px; font-size: 12px; }
+  .vcard .info { padding: 8px 10px 10px; gap: 6px; }
+  .vname { font-size: 14px; font-weight: 600; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .dls { border-top: 1px solid var(--line); max-height: 34vh; overflow: auto; padding: 10px 24px; background: var(--panel); }
+  .dls h4 { margin: 0 0 8px; display: flex; align-items: center; gap: 12px; font-size: 14px; }
+  .dls h4 .sp { margin-left: auto; }
+  .dl { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .dl:last-child { border-bottom: 0; }
+  .dl .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dl .m { font-size: 12px; color: var(--muted); grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 8px; }
+  .dl .progress { grid-column: 1 / -1; }
+  .dl a { color: var(--muted); }
+  .dl.ok .m { color: var(--ok); }
+  .dl.bad .m { color: var(--warn); }
+  @media (max-width: 760px) { .browse { grid-template-columns: 1fr; grid-template-rows: 180px 1fr; } .chats { border-right: 0; border-bottom: 1px solid var(--line); } }
+  @media (max-width: 640px) { header, main, .stats { padding-left: 16px; padding-right: 16px; } .boost input[type=range] { width: 140px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">🎬 Cine<span>Local</span></div>
+  <input class="search" id="q" type="search" placeholder="Buscar filme…">
+  <select class="select" id="sort">
+    <option value="title">Título (A–Z)</option>
+    <option value="added">Adicionados recentemente</option>
+    <option value="year">Ano</option>
+    <option value="size">Maior tamanho</option>
+  </select>
+  <button class="btn" id="tgBtn" title="Baixar filmes do Telegram">📥 Telegram <span id="tgBadge" class="badge" hidden></span></button>
+  <button class="btn" id="folderBtn" title="Escolher a pasta de filmes">📁 Pasta</button>
+  <button class="btn" id="reloadBtn" title="Atualizar catálogo">⟳</button>
+</header>
+
+<section class="stats" id="stats"></section>
+<main><div class="grid" id="grid"></div><div class="empty" id="empty" hidden></div></main>
+
+<dialog id="folderDlg">
+  <h3>Pasta dos filmes</h3>
+  <p>Caminho completo da pasta onde ficam seus filmes (subpastas também são lidas).</p>
+  <input class="search" id="folderInput" style="width:100%" placeholder="D:\Filmes">
+  <div class="actions" style="margin-top:16px">
+    <button class="btn ghost" onclick="folderDlg.close()">Cancelar</button>
+    <button class="btn primary" id="folderSave">Salvar</button>
+  </div>
+</dialog>
+
+<dialog id="compDlg">
+  <h3 id="compTitle">Reduzir tamanho</h3>
+  <p>O vídeo é recodificado em <b>H.265 (HEVC)</b>, que guarda a mesma imagem em bem menos espaço.
+     Todas as faixas de áudio e legendas são copiadas <b>sem alteração</b>. O original é mantido — a versão nova aparece como “compacto”.</p>
+  <div class="opts" id="compOpts"></div>
+  <div class="actions">
+    <button class="btn ghost" onclick="compDlg.close()">Cancelar</button>
+    <button class="btn primary" id="compGo">Comprimir</button>
+  </div>
+</dialog>
+
+<div id="player">
+  <video id="video" controls playsinline crossorigin="anonymous"></video>
+  <div class="perr" id="perr"></div>
+  <div class="pbar">
+    <div class="ptitle" id="ptitle"></div>
+    <div class="boost" title="Volume além de 100% (↑ / ↓)">
+      🔊 <input type="range" id="gain" min="0" max="800" step="10" value="100">
+      <output id="gainOut">100%</output>
+      <div class="meter" title="Nível do áudio"><i id="meter"></i></div>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button class="chip" data-g="100">100%</button>
+      <button class="chip" data-g="200">200%</button>
+      <button class="chip" data-g="400">400%</button>
+    </div>
+    <button class="chip" id="dialogBtn" title="Comprime a dinâmica e realça as vozes — ótimo para filmes com diálogo baixo e explosões altas">🗣 Realçar diálogos</button>
+    <button class="btn" id="miniBtn" title="Assistir numa janelinha por cima dos outros programas (P)">🗗 Mini player</button>
+    <button class="btn" id="closePlayer">✕ Fechar</button>
+  </div>
+  <!-- Controles do mini player (só aparecem na janela flutuante) -->
+  <div class="mini-ui">
+    <div class="mini-top">
+      <span class="mini-title" id="miniTitle"></span>
+      <button id="miniBack" title="Voltar para o app (Esc ou duplo clique)">⤢</button>
+      <button id="miniClose" title="Parar e fechar">✕</button>
+    </div>
+    <div class="mini-center">
+      <button id="miniRew" title="Voltar 10 s (←)">⟲</button>
+      <button id="miniPlay" class="big" title="Pausar / continuar (Espaço)">❚❚</button>
+      <button id="miniFwd" title="Avançar 10 s (→)">⟳</button>
+    </div>
+    <div class="mini-bottom">
+      <input type="range" id="miniSeek" min="0" max="1000" value="0" step="1">
+      <div class="mini-row">
+        <span id="miniTime">0:00 / 0:00</span>
+        <span class="mini-vol" title="Volume (↑ / ↓) — acima de 100% amplifica">🔊 <input type="range" id="miniGain" min="0" max="800" step="10"> <output id="miniGainOut">100%</output></span>
+        <button id="miniDialog" title="Realçar diálogos (D)">🗣</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="tg">
+  <div class="tghead">
+    <h2>📥 Baixar do Telegram</h2>
+    <span id="tgUser" style="color:var(--muted)"></span>
+    <div id="tgOpts" style="display:none;gap:14px;align-items:center;font-size:14px">
+      <span title="Quantos pedaços do arquivo são baixados ao mesmo tempo">Conexões
+        <select class="select" id="tgThreads" style="padding:4px 8px">
+          <option>4</option><option>8</option><option>12</option><option>16</option>
+        </select></span>
+      <label><input type="checkbox" id="tgAuto"> Comprimir ao terminar</label>
+    </div>
+    <button class="btn ghost" id="tgLogout" hidden>Sair da conta</button>
+    <button class="btn" id="tgClose">✕ Fechar</button>
+  </div>
+  <div class="tgbody" id="tgBody"></div>
+  <div class="dls" id="dls" hidden></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+// Esta página também é o mini player quando aberta como ?mini=<id>&t=<segundos>&playing=1
+const MINI = (() => {
+  const q = new URLSearchParams(location.search);
+  return q.has('mini') && window.cine ? { id: q.get('mini'), t: +q.get('t') || 0, playing: q.get('playing') === '1' } : null;
+})();
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+let state = { movies: [], profiles: {}, moviesDir: '' };
+let compTarget = null;
+
+const fmtSize = (b) => b >= 1e9 ? (b / 1e9).toFixed(2) + ' GB' : (b / 1e6).toFixed(0) + ' MB';
+const fmtDur = (s) => { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); return h ? `${h}h${String(m).padStart(2, '0')}` : `${m} min`; };
+const fmtEta = (s) => s == null ? '' : s > 3600 ? `~${Math.floor(s / 3600)}h${String(Math.floor(s % 3600 / 60)).padStart(2, '0')} restantes` : `~${Math.max(1, Math.round(s / 60))} min restantes`;
+const resLabel = (h) => h >= 2000 ? '4K' : h >= 1000 ? '1080p' : h >= 700 ? '720p' : h ? h + 'p' : '';
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 3200); }
+async function api(path, body) {
+  const r = await fetch(path, body ? { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Cine-Local': '1' }, body: JSON.stringify(body) } : {});
+  const j = await r.json(); if (!r.ok) throw new Error(j.error || 'erro'); return j;
+}
+
+// ---------- Catálogo ----------
+async function load() {
+  const data = await api('/api/movies');
+  state = data;
+  render();
+  pollJobs();
+}
+
+function render() {
+  const q = $('#q').value.trim().toLowerCase();
+  const sort = $('#sort').value;
+  // esconde a versão compacta quando o original também está na pasta (fica como um item só)
+  let list = state.movies.filter((m) => !(m.isCompact && m.originalId));
+  if (q) list = list.filter((m) => (m.title + ' ' + (m.year || '') + ' ' + m.rel).toLowerCase().includes(q));
+  const cmp = { title: (a, b) => a.title.localeCompare(b.title, 'pt-BR'), added: (a, b) => b.added - a.added,
+    year: (a, b) => (b.year || 0) - (a.year || 0), size: (a, b) => b.size - a.size }[sort];
+  list.sort(cmp);
+
+  const total = state.movies.reduce((s, m) => s + m.size, 0);
+  const hours = state.movies.filter((m) => !m.isCompact).reduce((s, m) => s + m.duration, 0) / 3600;
+  const saved = state.movies.filter((m) => m.compactSize).reduce((s, m) => s + (m.size - m.compactSize), 0);
+  const heavy = state.movies.filter((m) => !m.isCompact && !m.compactId && m.vcodec !== 'hevc' && m.vcodec !== 'av1').length;
+  $('#stats').innerHTML = `
+    <div><b>${state.movies.filter((m) => !(m.isCompact && m.originalId)).length}</b>filmes</div>
+    <div><b>${hours.toFixed(1)} h</b>de conteúdo</div>
+    <div><b>${fmtSize(total)}</b>em disco</div>
+    ${saved > 0 ? `<div><b style="color:var(--ok)">${fmtSize(saved)}</b>economizados</div>` : ''}
+    ${heavy ? `<div><b>${heavy}</b>podem ser comprimidos</div>` : ''}
+    <div style="margin-left:auto;align-self:end">${window.cine
+      ? `<a href="#" id="openDir" title="Abrir no Explorador de Arquivos" style="color:inherit">📁 ${esc(state.moviesDir)}</a>`
+      : `<span title="${esc(state.moviesDir)}">📁 ${esc(state.moviesDir)}</span>`}</div>`;
+  if (window.cine) $('#openDir').onclick = (e) => { e.preventDefault(); window.cine.showInFolder(state.moviesDir); };
+
+  $('#empty').hidden = list.length > 0;
+  $('#empty').innerHTML = state.movies.length
+    ? 'Nenhum filme encontrado para essa busca.'
+    : `Nenhum filme encontrado em <code>${esc(state.moviesDir)}</code>.<br><br>Coloque seus filmes lá ou clique em <b>📁 Pasta</b> para escolher outra pasta.`;
+
+  $('#grid').innerHTML = list.map((m) => {
+    const playId = m.compactId || m.id;
+    const resume = store.get('pos:' + playId, 0);
+    const pct = m.duration && resume ? Math.min(100, resume / m.duration * 100) : 0;
+    const efficient = m.vcodec === 'hevc' || m.vcodec === 'av1';
+    return `<article class="card" data-id="${m.id}">
+      <div class="poster" style="background-image:url('/thumb/${m.id}')" data-play="${playId}">
+        ${m.duration ? `<span class="dur">${fmtDur(m.duration)}</span>` : ''}
+        ${pct > 1 && pct < 97 ? `<span class="resume" style="width:${pct}%"></span>` : ''}
+      </div>
+      <div class="info">
+        <div class="title">${esc(m.title)} ${m.year ? `<small>(${m.year})</small>` : ''}</div>
+        <div class="tags">
+          ${resLabel(m.height) ? `<span class="tag hi">${resLabel(m.height)}</span>` : ''}
+          <span class="tag">${esc(m.vcodec.toUpperCase())}</span>
+          <span class="tag">${esc(m.acodec.toUpperCase())}${m.audioTracks > 1 ? ' ×' + m.audioTracks : ''}</span>
+          ${m.hasSubtitle ? '<span class="tag">LEG</span>' : ''}
+          ${m.compactId || m.isCompact ? '<span class="tag ok">compacto</span>' : ''}
+        </div>
+        ${jobHtml(m)}
+        <div class="row">
+          <span class="size">${m.compactSize
+            ? `${fmtSize(m.compactSize)} <span class="save">(−${Math.round((1 - m.compactSize / m.size) * 100)}%)</span>`
+            : fmtSize(m.size)}</span>
+          ${m.compactId
+            ? `<button class="mini" data-replace="${m.id}" title="Move o original para a pasta _originais">Manter só o compacto</button>`
+            : (!m.isCompact && !isActive(m.job)) ? `<button class="mini" data-comp="${m.id}">${efficient ? 'Recomprimir' : 'Reduzir tamanho'}</button>` : ''}
+        </div>
+      </div>
+    </article>`;
+  }).join('');
+}
+
+const isActive = (j) => j && (j.status === 'running' || j.status === 'queued');
+function jobHtml(m) {
+  const j = m.job; if (!j) return '';
+  if (j.status === 'queued') return `<div class="jobline"><span>Na fila…</span><a href="#" data-cancel="${m.id}">cancelar</a></div>`;
+  if (j.status === 'running') return `<div class="progress"><i style="width:${j.progress.toFixed(1)}%"></i></div>
+    <div class="jobline"><span>Comprimindo ${j.progress.toFixed(1)}%</span><span>${fmtEta(j.eta)} · <a href="#" data-cancel="${m.id}">cancelar</a></span></div>`;
+  if (j.status === 'error') return `<div class="jobline err">Falhou: ${esc(j.error).slice(0, 140)}</div>`;
+  if (j.status === 'skipped') return `<div class="jobline">${esc(j.error)}</div>`;
+  return '';
+}
+
+let pollTimer;
+async function pollJobs() {
+  clearTimeout(pollTimer);
+  const jobs = await api('/api/jobs').catch(() => ({}));
+  let finished = false;
+  for (const m of state.movies) {
+    const j = jobs[m.id];
+    if (isActive(m.job) && j && !isActive(j)) finished = true;
+    m.job = j || null;
+  }
+  if (finished) return load();
+  if (!$('#player').classList.contains('open')) render();
+  if (Object.values(jobs).some(isActive)) pollTimer = setTimeout(pollJobs, 2000);
+}
+
+$('#grid').addEventListener('click', async (e) => {
+  const t = e.target.closest('[data-play],[data-comp],[data-cancel],[data-replace]'); if (!t) return;
+  e.preventDefault();
+  if (t.dataset.play) openPlayer(t.dataset.play);
+  if (t.dataset.comp) openCompress(t.dataset.comp);
+  if (t.dataset.cancel) { await api('/api/cancel/' + t.dataset.cancel, {}); pollJobs(); }
+  if (t.dataset.replace) {
+    if (!confirm('O arquivo original será movido para a pasta "_originais" (não é apagado). Continuar?')) return;
+    try { await api('/api/replace/' + t.dataset.replace, {}); toast('Pronto! O original está em _originais.'); load(); }
+    catch (err) { toast('Erro: ' + err.message); }
+  }
+});
+$('#q').addEventListener('input', render);
+$('#sort').addEventListener('change', () => { store.set('sort', $('#sort').value); render(); });
+$('#sort').value = store.get('sort', 'title');
+$('#reloadBtn').onclick = load;
+
+// ---------- Pasta ----------
+$('#folderBtn').onclick = async () => {
+  if (!window.cine) { $('#folderInput').value = state.moviesDir; folderDlg.showModal(); return; }
+  // No app de desktop usa a janela nativa do Windows para escolher a pasta
+  const dir = await window.cine.pickFolder(state.moviesDir);
+  if (!dir) return;
+  try { await api('/api/config', { moviesDir: dir }); load(); } catch (e) { toast(e.message); }
+};
+$('#folderSave').onclick = async () => {
+  try { await api('/api/config', { moviesDir: $('#folderInput').value.trim() }); folderDlg.close(); load(); }
+  catch (e) { toast(e.message); }
+};
+
+// ---------- Compressão ----------
+const PROFILE_HINT = {
+  qualidade: 'CRF 20, 10 bits. Diferença imperceptível. Pode levar mais que a duração do filme.',
+  equilibrado: 'CRF 23. Arquivo ainda menor, qualidade muito próxima. Cerca de 2× mais rápido.',
+  nvidia: 'Usa a placa de vídeo. Muito mais rápido, arquivo um pouco maior que o da CPU.',
+  amd: 'Usa a placa de vídeo AMD (Radeon).',
+  intel: 'Usa o vídeo integrado Intel (Quick Sync).',
+};
+function openCompress(id) {
+  compTarget = id;
+  const m = state.movies.find((x) => x.id === id);
+  $('#compTitle').textContent = 'Reduzir tamanho — ' + m.title;
+  const last = store.get('profile', 'qualidade');
+  $('#compOpts').innerHTML = Object.entries(state.profiles).map(([k, label]) => `
+    <label><input type="radio" name="prof" value="${k}" ${k === last ? 'checked' : ''}>
+      <span>${esc(label)}<small>${PROFILE_HINT[k] || ''}</small></span></label>`).join('');
+  compDlg.showModal();
+}
+$('#compGo').onclick = async () => {
+  const profile = document.querySelector('input[name=prof]:checked')?.value || 'qualidade';
+  store.set('profile', profile);
+  compDlg.close();
+  await api('/api/compress/' + compTarget, { profile });
+  toast('Compressão iniciada. Você pode continuar assistindo enquanto isso.');
+  pollJobs();
+};
+
+// ---------- Player com amplificação de áudio ----------
+const video = $('#video');
+let audio = null; // grafo Web Audio, criado no primeiro play
+let currentId = null;
+
+function buildAudio() {
+  const ctx = new AudioContext();
+  const src = ctx.createMediaElementSource(video);
+  // "Realçar diálogos": compressor que aproxima sons baixos dos altos + reforço na faixa da voz
+  const night = ctx.createDynamicsCompressor();
+  const voice = ctx.createBiquadFilter();
+  voice.type = 'peaking'; voice.frequency.value = 2500; voice.Q.value = 0.9;
+  const gain = ctx.createGain();
+  // Limitador final: permite volume muito alto sem estourar/distorcer os picos
+  const limiter = ctx.createDynamicsCompressor();
+  limiter.threshold.value = -2; limiter.knee.value = 0; limiter.ratio.value = 20;
+  limiter.attack.value = 0.002; limiter.release.value = 0.2;
+  const analyser = ctx.createAnalyser(); analyser.fftSize = 512;
+  src.connect(night).connect(voice).connect(gain).connect(limiter).connect(ctx.destination);
+  limiter.connect(analyser);
+  audio = { ctx, night, voice, gain, analyser, buf: new Float32Array(analyser.fftSize) };
+  applyDialog(store.get('dialog', false));
+  meterLoop();
+}
+
+function applyDialog(on) {
+  $('#dialogBtn').classList.toggle('on', on);
+  $('#miniDialog').classList.toggle('on', on);
+  if (!audio) return;
+  const n = audio.night;
+  if (on) { n.threshold.value = -34; n.knee.value = 12; n.ratio.value = 5; n.attack.value = 0.005; n.release.value = 0.3; audio.voice.gain.value = 5; }
+  else { n.threshold.value = 0; n.ratio.value = 1; audio.voice.gain.value = 0; }
+}
+
+function setGain(pct, save = true) {
+  pct = Math.max(0, Math.min(800, Math.round(pct / 10) * 10));
+  $('#gain').value = pct;
+  const db = pct ? 20 * Math.log10(pct / 100) : -Infinity;
+  $('#gainOut').textContent = `${pct}%` + (pct > 100 ? ` (+${db.toFixed(0)} dB)` : '');
+  $('#gainOut').classList.toggle('loud', pct > 100);
+  document.querySelectorAll('.chip[data-g]').forEach((c) => c.classList.toggle('on', +c.dataset.g === pct));
+  $('#miniGain').value = pct;
+  $('#miniGainOut').textContent = pct + '%';
+  $('#miniGainOut').classList.toggle('loud', pct > 100);
+  if (audio) audio.gain.gain.setTargetAtTime(pct / 100, audio.ctx.currentTime, 0.03);
+  if (save && currentId) store.set('gain:' + currentId, pct);
+}
+
+function meterLoop() {
+  if ($('#player').classList.contains('open')) {
+    audio.analyser.getFloatTimeDomainData(audio.buf);
+    let peak = 0; for (const v of audio.buf) peak = Math.max(peak, Math.abs(v));
+    const el = $('#meter');
+    el.style.width = Math.min(100, peak * 100) + '%';
+    el.style.background = peak > 0.95 ? 'var(--warn)' : peak > 0.7 ? 'var(--accent)' : 'var(--ok)';
+  }
+  requestAnimationFrame(meterLoop);
+}
+
+// opts.startAt: começa neste ponto (em vez do salvo); opts.autoplay: false para abrir pausado
+function openPlayer(id, opts = {}) {
+  const m = state.movies.find((x) => x.id === id);
+  currentId = id;
+  $('#ptitle').textContent = m ? `${m.title}${m.year ? ' (' + m.year + ')' : ''}` : '';
+  $('#perr').style.display = 'none';
+  video.querySelectorAll('track').forEach((t) => t.remove());
+  video.src = '/video/' + id;
+  if (m?.hasSubtitle) {
+    const tr = document.createElement('track');
+    Object.assign(tr, { kind: 'subtitles', label: 'Legenda', srclang: 'pt', src: '/subs/' + id, default: true });
+    video.appendChild(tr);
+  }
+  $('#player').classList.add('open');
+  if (!audio) buildAudio();
+  audio.ctx.resume();
+  setGain(store.get('gain:' + id, store.get('lastGain', 100)), false);
+  $('#miniTitle').textContent = $('#ptitle').textContent;
+  video.addEventListener('loadedmetadata', () => {
+    if (opts.startAt != null) video.currentTime = opts.startAt;
+    else {
+      const pos = store.get('pos:' + id, 0);
+      if (pos > 10 && pos < video.duration - 60) video.currentTime = pos;
+    }
+    if (MINI && video.videoWidth) window.cine.miniAspect(video.videoWidth / video.videoHeight);
+  }, { once: true });
+  if (opts.autoplay !== false) video.play().catch(() => {});
+}
+
+function closePlayer() {
+  if (currentId && video.currentTime) store.set('pos:' + currentId, video.currentTime);
+  video.pause(); video.removeAttribute('src'); video.load();
+  $('#player').classList.remove('open');
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  currentId = null;
+  render();
+}
+
+video.addEventListener('timeupdate', () => {
+  if (currentId && Math.floor(video.currentTime) % 5 === 0) store.set('pos:' + currentId, video.currentTime);
+});
+video.addEventListener('error', () => {
+  const m = state.movies.find((x) => x.id === currentId);
+  $('#perr').style.display = 'block';
+  $('#perr').innerHTML = `<b>O navegador não conseguiu reproduzir este arquivo</b>
+    <p style="color:var(--muted)">Formato: ${esc((m?.vcodec || '?').toUpperCase())} / ${esc((m?.acodec || '?').toUpperCase())}.
+    Tente “Reduzir tamanho” (gera um MKV em H.265 que Edge/Chrome tocam) ou abra o filme no Microsoft Edge,
+    que suporta mais formatos no Windows.</p>`;
+});
+
+$('#gain').addEventListener('input', (e) => { setGain(+e.target.value); store.set('lastGain', +e.target.value); });
+document.querySelectorAll('.chip[data-g]').forEach((c) => c.onclick = () => { setGain(+c.dataset.g); store.set('lastGain', +c.dataset.g); });
+$('#dialogBtn').onclick = () => { const on = !store.get('dialog', false); store.set('dialog', on); applyDialog(on); toast(on ? 'Realce de diálogos ligado' : 'Realce de diálogos desligado'); };
+$('#closePlayer').onclick = closePlayer;
+
+document.addEventListener('keydown', (e) => {
+  if (!$('#player').classList.contains('open') || e.target.matches('input[type=search]')) return;
+  const k = e.key;
+  if (k === 'Escape') { if (MINI) window.cine.closeMini(video.paused ? 'pause' : 'resume'); else if (!document.fullscreenElement) closePlayer(); }
+  else if (k === 'p' && !MINI) enterMini();
+  else if (k === 'ArrowUp') { e.preventDefault(); setGain(+$('#gain').value + 20); }
+  else if (k === 'ArrowDown') { e.preventDefault(); setGain(+$('#gain').value - 20); }
+  else if (k === 'ArrowRight') { e.preventDefault(); video.currentTime += 10; }
+  else if (k === 'ArrowLeft') { e.preventDefault(); video.currentTime -= 10; }
+  else if (k === ' ' && e.target !== video) { e.preventDefault(); video.paused ? video.play() : video.pause(); }
+  else if (k === 'f' && !MINI) { document.fullscreenElement ? document.exitFullscreen() : $('#player').requestFullscreen(); }
+  else if (k === 'd') $('#dialogBtn').click();
+});
+
+// ---------- Mini player / Picture in Picture ----------
+// No app de desktop abre uma janela flutuante própria (com legenda e volume amplificado);
+// no navegador, usa o Picture in Picture padrão.
+async function enterMini() {
+  if (!currentId) return;
+  if (!window.cine) {
+    try { document.pictureInPictureElement ? await document.exitPictureInPicture() : await video.requestPictureInPicture(); }
+    catch (e) { toast('Picture in Picture indisponível: ' + e.message); }
+    return;
+  }
+  const state = { id: currentId, t: video.currentTime, playing: !video.paused };
+  closePlayer();
+  window.cine.openMini(state);
+}
+$('#miniBtn').onclick = enterMini;
+
+// Janela principal: quando o mini player fecha, continua de onde ele parou
+window.cine?.onMiniClosed?.(({ id, t, playing, action }) => {
+  if (!id) return;
+  store.set('pos:' + id, t);
+  if (action === 'stop') return render();
+  openPlayer(id, { startAt: t, autoplay: action === 'resume' && playing });
+});
+
+if (MINI) {
+  document.body.classList.add('mini');
+  document.title = 'Cine Local — mini player';
+  video.controls = false;
+  const fmtClock = (s) => { s = Math.floor(s || 0); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), ss = String(s % 60).padStart(2, '0');
+    return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`; };
+  const togglePlay = () => (video.paused ? video.play() : video.pause());
+  const report = () => window.cine.reportMini({ id: currentId, t: video.currentTime, playing: !video.paused });
+  const sync = () => {
+    document.body.classList.toggle('paused', video.paused);
+    $('#miniPlay').textContent = video.paused ? '▶' : '❚❚';
+    report();
+  };
+  video.addEventListener('play', sync);
+  video.addEventListener('pause', sync);
+  let seeking = false;
+  video.addEventListener('timeupdate', () => {
+    if (!seeking && video.duration) $('#miniSeek').value = (video.currentTime / video.duration) * 1000;
+    $('#miniTime').textContent = `${fmtClock(video.currentTime)} / ${fmtClock(video.duration)}`;
+    report();
+  });
+  $('#miniSeek').oninput = () => { seeking = true; $('#miniTime').textContent = `${fmtClock($('#miniSeek').value / 1000 * video.duration)} / ${fmtClock(video.duration)}`; };
+  $('#miniSeek').onchange = () => { video.currentTime = $('#miniSeek').value / 1000 * video.duration; seeking = false; };
+  $('#miniPlay').onclick = togglePlay;
+  $('#miniRew').onclick = () => (video.currentTime -= 10);
+  $('#miniFwd').onclick = () => (video.currentTime += 10);
+  $('#miniGain').oninput = (e) => { setGain(+e.target.value); store.set('lastGain', +e.target.value); };
+  $('#miniDialog').onclick = () => $('#dialogBtn').click();
+  $('#miniBack').onclick = () => window.cine.closeMini(video.paused ? 'pause' : 'resume');
+  $('#miniClose').onclick = () => { video.pause(); report(); window.cine.closeMini('stop'); };
+  // clique no vídeo pausa/continua; duplo clique volta para o app
+  $('.mini-center').addEventListener('click', (e) => { if (e.target === e.currentTarget) togglePlay(); });
+  $('.mini-center').addEventListener('dblclick', (e) => { if (e.target === e.currentTarget) $('#miniBack').click(); });
+  window.addEventListener('beforeunload', () => { if (currentId) store.set('pos:' + currentId, video.currentTime); });
+}
+
+// ---------- Telegram ----------
+const tg = { status: null, chat: null, chats: [], vids: [], next: null, q: '', downloads: [] };
+const fmtSpeed = (b) => b >= 1e6 ? (b / 1e6).toFixed(1) + ' MB/s' : (b / 1e3).toFixed(0) + ' KB/s';
+
+async function openTg() {
+  $('#tg').classList.add('open');
+  $('#tgBody').innerHTML = '<p class="setup" style="color:var(--muted)">Conectando ao Telegram…</p>';
+  await refreshTg();
+}
+$('#tgBtn').onclick = openTg;
+$('#tgClose').onclick = () => $('#tg').classList.remove('open');
+
+async function refreshTg() {
+  try { tg.status = await api('/api/tg/status'); }
+  catch (e) { tg.status = { configured: false, error: e.message }; }
+  const s = tg.status;
+  $('#tgUser').textContent = s.loggedIn ? '👤 ' + s.user : '';
+  $('#tgLogout').hidden = !s.loggedIn;
+  $('#tgOpts').style.display = s.loggedIn ? 'flex' : 'none';
+  if (s.loggedIn) { $('#tgThreads').value = s.threads; $('#tgAuto').checked = s.autoCompress; }
+  if (!s.configured) return renderSetup();
+  if (!s.loggedIn) return renderLogin();
+  renderBrowse();
+}
+
+function renderSetup(error) {
+  $('#tgBody').innerHTML = `<div class="setup">
+    <h3 style="margin:0">Primeira configuração (uma vez só)</h3>
+    <p style="color:var(--muted);margin:0">O Telegram exige que cada programa tenha uma “chave de app”. É gratuito e leva 1 minuto:</p>
+    <ol>
+      <li>Abra <a href="https://my.telegram.org" target="_blank" rel="noopener">my.telegram.org</a> e entre com seu número.</li>
+      <li>Clique em <b>API development tools</b>.</li>
+      <li>Preencha só <i>App title</i> (ex.: CineLocal) e <i>Short name</i> (ex.: cinelocal) e crie.</li>
+      <li>Copie o <b>App api_id</b> e o <b>App api_hash</b> para cá.</li>
+    </ol>
+    <label class="field"><span>api_id</span><input id="apiId" inputmode="numeric" autocomplete="off"></label>
+    <label class="field"><span>api_hash</span><input id="apiHash" autocomplete="off" spellcheck="false"></label>
+    ${error || tg.status?.error ? `<div class="err">${esc(error || tg.status.error)}</div>` : ''}
+    <div class="note">🔒 Tudo fica só neste computador (arquivos <code>config.json</code> e <code>telegram.session</code>). Não compartilhe esses arquivos.</div>
+    <div><button class="btn primary" id="saveCreds">Salvar e continuar</button></div>
+  </div>`;
+  $('#saveCreds').onclick = async () => {
+    try { await api('/api/tg/creds', { apiId: $('#apiId').value, apiHash: $('#apiHash').value }); await refreshTg(); }
+    catch (e) { renderSetup(e.message); }
+  };
+}
+
+function renderLogin() {
+  const s = tg.status;
+  const step = s.step === 'code' ? 'code' : s.step === 'password' ? 'password' : 'phone';
+  const form = {
+    phone: `<label class="field"><span>Seu número do Telegram, com código do país</span><input id="lgIn" placeholder="+55 11 91234-5678" inputmode="tel" autocomplete="tel"></label>
+      <div><button class="btn primary" id="lgGo">Enviar código</button></div>`,
+    code: `<p style="margin:0">O Telegram enviou um código <b>no próprio app do Telegram</b> (no celular ou no computador). Digite aqui:</p>
+      <label class="field"><span>Código</span><input id="lgIn" inputmode="numeric" autocomplete="one-time-code" maxlength="8"></label>
+      <div><button class="btn primary" id="lgGo">Entrar</button></div>`,
+    password: `<p style="margin:0">Sua conta tem verificação em duas etapas. Digite a senha da nuvem${s.hint ? ` (dica: <i>${esc(s.hint)}</i>)` : ''}:</p>
+      <label class="field"><span>Senha</span><input id="lgIn" type="password" autocomplete="current-password"></label>
+      <div><button class="btn primary" id="lgGo">Entrar</button></div>`,
+  }[step];
+  $('#tgBody').innerHTML = `<div class="setup"><h3 style="margin:0">Entrar no Telegram</h3>${form}
+    ${s.error ? `<div class="err">${esc(s.error)}</div>` : ''}
+    <div class="note">O login é feito direto com o Telegram e fica salvo neste computador; você só faz isso uma vez.</div>
+    <div><a href="#" id="lgKeys" style="color:var(--muted);font-size:13px">Trocar api_id / api_hash</a></div></div>`;
+  const input = $('#lgIn'); input.focus();
+  const go = async () => {
+    $('#lgGo').disabled = true; $('#lgGo').textContent = 'Aguarde…';
+    try {
+      if (step === 'phone') await api('/api/tg/login/phone', { phone: input.value });
+      else await api('/api/tg/login/' + step, { [step]: input.value });
+      // aguarda o Telegram responder (próxima etapa, erro ou sucesso)
+      for (let i = 0; i < 40; i++) {
+        await new Promise((r) => setTimeout(r, 400));
+        const st = await api('/api/tg/status');
+        if (st.loggedIn || st.error || (st.step !== 'waiting' && st.step !== step)) break;
+      }
+    } catch (e) { toast(e.message); }
+    refreshTg();
+  };
+  $('#lgGo').onclick = go;
+  input.onkeydown = (e) => { if (e.key === 'Enter') go(); };
+  $('#lgKeys').onclick = (e) => { e.preventDefault(); renderSetup(); };
+}
+
+function renderBrowse() {
+  $('#tgBody').innerHTML = `
+    <div class="links">
+      <textarea id="tgLinks" placeholder="Cole aqui um ou vários links de mensagens (ex.: https://t.me/canal/123) e clique em Baixar"></textarea>
+      <button class="btn primary" id="tgLinkGo">Baixar</button>
+    </div>
+    <div class="browse">
+      <div class="chats">
+        <input id="chatQ" type="search" placeholder="Buscar conversa ou canal…">
+        <div class="chatlist" id="chatList"><p style="padding:0 14px;color:var(--muted)">Carregando conversas…</p></div>
+      </div>
+      <div class="vids" id="vids"><p style="color:var(--muted);padding:16px 4px">← Escolha um canal, grupo ou conversa para ver os vídeos.</p></div>
+    </div>`;
+  $('#tgLinkGo').onclick = async () => {
+    const links = $('#tgLinks').value.trim(); if (!links) return;
+    try {
+      const r = await api('/api/tg/download', { links });
+      $('#tgLinks').value = '';
+      toast(r.errors.length ? 'Alguns links falharam: ' + r.errors.join(' ') : 'Adicionado à fila de downloads');
+    } catch (e) { toast(e.message); }
+    pollDownloads();
+  };
+  let t; $('#chatQ').oninput = () => { clearTimeout(t); t = setTimeout(loadChats, 300); };
+  loadChats();
+  if (tg.chat) openChat(tg.chat);
+}
+
+async function loadChats() {
+  try { tg.chats = await api('/api/tg/chats?q=' + encodeURIComponent($('#chatQ')?.value || '')); }
+  catch (e) { $('#chatList').innerHTML = `<p class="err" style="padding:0 14px">${esc(e.message)}</p>`; return; }
+  const icon = { canal: '📢', grupo: '👥', pessoa: '👤' };
+  $('#chatList').innerHTML = tg.chats.map((c) => `<button class="chat ${tg.chat?.id === c.id ? 'sel' : ''}" data-chat="${c.id}">
+      <span>${c.title === 'Mensagens salvas' ? '🔖' : icon[c.type]}</span><span class="t">${esc(c.title)}</span><small>${c.type}</small></button>`).join('')
+    || '<p style="padding:0 14px;color:var(--muted)">Nada encontrado.</p>';
+}
+$('#tg').addEventListener('click', async (e) => {
+  const c = e.target.closest('[data-chat]');
+  if (c) { openChat(tg.chats.find((x) => x.id === c.dataset.chat)); document.querySelectorAll('.chat').forEach((b) => b.classList.toggle('sel', b === c)); }
+  const d = e.target.closest('[data-dl]');
+  if (d) {
+    d.disabled = true; d.textContent = 'Na fila';
+    try { await api('/api/tg/download', { peer: tg.chat.id, msgId: +d.dataset.dl }); } catch (err) { toast(err.message); d.disabled = false; d.textContent = 'Baixar'; }
+    pollDownloads();
+  }
+  if (e.target.id === 'moreVids') loadVids(true);
+  const a = e.target.closest('[data-dlact]');
+  if (a) { e.preventDefault(); await api('/api/tg/' + a.dataset.dlact, { key: a.dataset.key }); pollDownloads(); }
+});
+
+function openChat(chat) {
+  tg.chat = chat; tg.q = '';
+  $('#vids').innerHTML = `<input class="vidsearch" id="vidQ" type="search" placeholder="Buscar vídeos em ${esc(chat.title)}…" style="margin:12px 0;width:min(360px,100%)">
+    <div class="vgrid" id="vgrid"></div><div id="vmore" style="text-align:center;padding:16px"></div>`;
+  let t; $('#vidQ').oninput = () => { clearTimeout(t); t = setTimeout(() => { tg.q = $('#vidQ').value.trim(); loadVids(); }, 400); };
+  loadVids();
+}
+
+async function loadVids(more = false) {
+  const chat = tg.chat;
+  if (!more) { tg.vids = []; tg.next = null; $('#vgrid').innerHTML = ''; }
+  $('#vmore').innerHTML = '<span style="color:var(--muted)">Carregando vídeos…</span>';
+  let r;
+  try { r = await api(`/api/tg/videos/${chat.id}?q=${encodeURIComponent(tg.q)}&offset=${more ? tg.next : 0}`); }
+  catch (e) { $('#vmore').innerHTML = `<span class="err">${esc(e.message)}</span>`; return; }
+  if (tg.chat !== chat) return;
+  tg.vids.push(...r.items); tg.next = r.nextOffset;
+  const queued = new Set(tg.downloads.filter((d) => d.peer === chat.id).map((d) => d.msgId));
+  $('#vgrid').innerHTML = tg.vids.map((v) => `<div class="vcard">
+      <div class="vthumb" style="${v.hasThumb ? `background-image:url('/api/tg/thumb/${chat.id}/${v.id}')` : ''}">
+        ${v.duration ? `<span class="dur">${fmtDur(v.duration)}</span>` : ''}</div>
+      <div class="info">
+        <div class="vname" title="${esc(v.caption || v.name)}">${esc(v.name)}</div>
+        <div class="row"><span class="size">${fmtSize(v.size)}${resLabel(v.height) ? ' · ' + resLabel(v.height) : ''}</span>
+          <button class="mini" data-dl="${v.id}" ${queued.has(v.id) ? 'disabled' : ''}>${queued.has(v.id) ? 'Na fila' : 'Baixar'}</button></div>
+      </div></div>`).join('');
+  $('#vmore').innerHTML = !tg.vids.length ? '<span style="color:var(--muted)">Nenhum vídeo encontrado aqui.</span>'
+    : r.nextOffset ? '<button class="btn" id="moreVids">Carregar mais</button>' : '';
+}
+
+$('#tgThreads').onchange = () => api('/api/tg/options', { threads: +$('#tgThreads').value }).then(() => toast('Vale para o próximo download'));
+$('#tgAuto').onchange = () => api('/api/tg/options', { autoCompress: $('#tgAuto').checked });
+$('#tgLogout').onclick = async () => {
+  if (!confirm('Sair da conta do Telegram neste app?')) return;
+  await api('/api/tg/logout', {}); tg.chat = null; refreshTg();
+};
+
+let dlTimer, lastDone = -1;
+async function pollDownloads() {
+  clearTimeout(dlTimer);
+  try { tg.downloads = await api('/api/tg/downloads'); } catch { return; }
+  const active = tg.downloads.filter((d) => d.status === 'running' || d.status === 'queued');
+  const running = tg.downloads.find((d) => d.status === 'running');
+  $('#tgBadge').hidden = !active.length;
+  $('#tgBadge').textContent = running ? `${Math.floor(running.done / running.size * 100)}%` : active.length;
+  const done = tg.downloads.filter((d) => d.status === 'done').length;
+  if (lastDone >= 0 && done > lastDone) { load(); toast('Download concluído — já está no catálogo!'); }
+  lastDone = done;
+  renderDownloads();
+  if (active.length) dlTimer = setTimeout(pollDownloads, 1000);
+}
+
+function renderDownloads() {
+  const box = $('#dls');
+  box.hidden = !tg.downloads.length;
+  const total = tg.downloads.filter((d) => d.status === 'running').reduce((s, d) => s + (d.speed || 0), 0);
+  box.innerHTML = `<h4>Downloads ${total ? `<span style="color:var(--accent)">${fmtSpeed(total)}</span>` : ''}
+      <a href="#" class="sp" data-dlact="clear" style="color:var(--muted);font-weight:400">Limpar concluídos</a></h4>` +
+    tg.downloads.slice().reverse().map((d) => {
+      const pct = d.size ? d.done / d.size * 100 : 0;
+      const meta = {
+        queued: `<span>Na fila</span><a href="#" data-dlact="cancel" data-key="${d.key}">cancelar</a>`,
+        running: `<span>${fmtSize(d.done)} de ${fmtSize(d.size)} · ${pct.toFixed(1)}% · ${fmtSpeed(d.speed || 0)}${d.note ? ' · ' + esc(d.note) : ''}</span>
+          <span>${fmtEta(d.eta)} · <a href="#" data-dlact="cancel" data-key="${d.key}">pausar</a></span>`,
+        done: `<span>✓ Concluído — média de ${fmtSpeed(d.avgSpeed || 0)}</span>`,
+        error: `<span>Falhou: ${esc(d.error || '')}</span><a href="#" data-dlact="retry" data-key="${d.key}">tentar de novo</a>`,
+        canceled: `<span>Pausado em ${pct.toFixed(0)}%</span><a href="#" data-dlact="retry" data-key="${d.key}">continuar</a>`,
+      }[d.status];
+      return `<div class="dl ${d.status === 'done' ? 'ok' : d.status === 'error' ? 'bad' : ''}">
+        <span class="n" title="${esc(d.name)}">${esc(d.name)}</span><span class="size">${fmtSize(d.size)}</span>
+        ${d.status === 'running' || d.status === 'canceled' ? `<div class="progress"><i style="width:${pct}%"></i></div>` : ''}
+        <div class="m">${meta}</div></div>`;
+    }).join('');
+}
+
+if (MINI) {
+  load().then(() => openPlayer(MINI.id, { startAt: MINI.t, autoplay: MINI.playing }))
+    .catch((e) => toast('Erro ao carregar: ' + e.message));
+} else {
+  pollDownloads();
+  load().catch((e) => toast('Erro ao carregar: ' + e.message));
+}
+</script>
+</body>
+</html>

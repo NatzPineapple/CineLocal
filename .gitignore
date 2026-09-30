@@ -1,0 +1,46 @@
+# Dependências (reinstale com: npm install)
+node_modules/
+
+# Instalador e app empacotado (gere com: npm run dist)
+dist/
+
+# ⚠️ Dados pessoais — NUNCA versionar
+# telegram.session dá acesso à sua conta do Telegram; config.json tem o api_id/api_hash
+telegram.session
+config.json
+
+# Estado local do app (tamanho/posição das janelas)
+window.json
+mini.json
+
+# Filmes e arquivos gerados a partir deles
+filmes/
+.cache/
+*.part
+*.part.json
+*.compacto.mkv
+*.compacto.part.mkv
+_originais/
+
+# Vídeos e legendas soltos, caso algum fique fora de filmes/
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.m4v
+*.webm
+*.wmv
+*.srt
+*.vtt
+
+# Logs e lixo do sistema/editor
+npm-debug.log*
+*.log
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+
+# Configuração local do Claude Code
+.claude/
